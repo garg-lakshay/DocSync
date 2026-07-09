@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0a0a0b;
+  --surface-1: #141416;
+  --surface-2: #1c1c1f;
+  --border: #2a2a2e;
+  --border-hover: #3a3a3f;
+  --text-primary: #f4f4f5;
+  --text-secondary: #9b9ba1;
+  --accent: #6b7ff0;
+  --accent-subtle: #1b1e3a;
+  --online: #3dd68c;
+  --syncing: #f0a742;
+  --offline: #5a5a60;
+  --danger: #f0546b;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface-1);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent: var(--accent);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-online: var(--online);
+  --color-syncing: var(--syncing);
+  --color-offline: var(--offline);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-source-serif);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.editor-content {
+  font-family: var(--font-source-serif), Georgia, serif;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.editor-content .ProseMirror {
+  outline: none;
+  min-height: 420px;
+}
+
+.editor-content .ProseMirror p {
+  margin: 0.75em 0;
+}
+
+@keyframes sync-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.sync-pulse {
+  animation: sync-pulse 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sync-pulse {
+    animation: none;
+  }
+}
