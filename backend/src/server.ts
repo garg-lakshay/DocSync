@@ -2,7 +2,8 @@ import "dotenv/config";
 import { WebSocketServer, WebSocket } from "ws";
 import http from "http";
 import { setupWSConnection } from "./ws-connection.js";
-import { PrismaClient, Role } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { Role } from "./role.js";
 import { verifyWsToken } from "./ws-token.js";
 import {
   isOversizedPayload,
