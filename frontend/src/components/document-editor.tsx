@@ -8,7 +8,6 @@ import Collaboration from "@tiptap/extension-collaboration";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { WebsocketProvider } from "y-websocket";
-import { Role } from "@prisma/client";
 import { toast } from "sonner";
 import { RoleBadge } from "@/components/role-badge";
 import { ConnectionStatusPill } from "@/components/connection-status";
@@ -19,7 +18,16 @@ import { VersionTimeline } from "@/components/version-timeline";
 import { encodeSnapshot, restoreFromSnapshot } from "@/lib/ydoc";
 import { cacheDocumentMeta } from "@/lib/document-cache";
 import type { PresenceUser } from "@/lib/presence";
+import { localAwarenessUser, parseAwarenessUsers } from "@/lib/yjs/awareness";
 import { cn } from "@/lib/utils";
+
+const Role = {
+  OWNER: "OWNER",
+  EDITOR: "EDITOR",
+  VIEWER: "VIEWER",
+} as const;
+
+type Role = (typeof Role)[keyof typeof Role];
 
 type ConnectionStatus = "connecting" | "connected" | "offline" | "syncing";
 
@@ -117,11 +125,7 @@ export function DocumentEditor({
       });
       providerRef.current = provider;
 
-      provider.awareness.setLocalStateField("user", {
-        id: userId,
-        name: userName,
-        color: `#${userId.slice(0, 6)}`,
-      });
+      provider.awareness.setLocalStateField("user", localAwarenessUser(userId, userName));
 
       const handleStatus = ({ status: wsStatus }: { status: string }) => {
         if (wsStatus === "connected") setStatus("connected");
@@ -135,13 +139,7 @@ export function DocumentEditor({
       };
 
       const updatePresence = () => {
-        const users = new Map<string, PresenceUser>();
-        provider.awareness.getStates().forEach((state) => {
-          const user = state.user as { id?: string; name?: string } | undefined;
-          if (!user?.name || !user?.id) return;
-          users.set(user.id, { id: user.id, name: user.name });
-        });
-        setPresenceUsers(Array.from(users.values()));
+        setPresenceUsers(parseAwarenessUsers(provider.awareness.getStates()));
       };
 
       provider.on("status", handleStatus);
