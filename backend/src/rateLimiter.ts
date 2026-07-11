@@ -16,7 +16,6 @@ function getRedis(): Redis | null {
     redis = new Redis(url, {
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,
-      lazyConnect: true,
     });
     redis.on("error", (err: Error) => {
       console.error("[rate-limiter] Redis error:", err.message);
@@ -38,10 +37,6 @@ export async function checkRateLimit(
   const key = `ratelimit:${userId}:${documentId}`;
 
   try {
-    if (client.status !== "ready") {
-      await client.connect();
-    }
-
     const count = await client.incr(key);
     if (count === 1) {
       await client.expire(key, RATE_LIMIT_WINDOW_SEC);

@@ -1,7 +1,15 @@
 import Link from "next/link";
+import { Sparkles, UserPlus, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const features = [
+type Feature = {
+  title: string;
+  description: string;
+  icon?: string;
+  Icon?: LucideIcon;
+};
+
+const features: Feature[] = [
   {
     title: "Works offline",
     description:
@@ -19,6 +27,18 @@ const features = [
     description:
       "Save a snapshot any time, restore it without losing anyone's current work.",
     icon: "🕐",
+  },
+  {
+    title: "AI-powered insights",
+    description:
+      "Every version gets an AI-generated summary of what changed, and you can generate a full document summary in one click.",
+    Icon: Sparkles,
+  },
+  {
+    title: "Invite anyone, instantly",
+    description:
+      "Share a document by email — if they're new, a signup link drops them straight in with the right access level.",
+    Icon: UserPlus,
   },
 ];
 
@@ -71,28 +91,44 @@ export function LandingContent({ showNav = true }: LandingContentProps) {
           aria-hidden="true"
         >
           <div className="rounded-md border border-border bg-bg p-4 text-left">
-            <div className="mb-4 flex items-center justify-between gap-2">
+            <div className="mb-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="rounded-full border border-border px-2 py-0.5 text-xs text-text-secondary">
+                <span className="rounded-full border border-border px-2 py-0.5 text-xs text-online">
                   ● Connected
                 </span>
                 <div className="flex -space-x-2">
-                  <span className="h-6 w-6 rounded-full bg-accent text-[9px] leading-6 text-white">LG</span>
-                  <span className="h-6 w-6 rounded-full bg-online text-[9px] leading-6 text-bg">AK</span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[9px] text-white">
+                    LG
+                  </span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-online text-[9px] text-bg">
+                    AK
+                  </span>
                 </div>
               </div>
-              <span className="rounded-md border border-border px-2 py-1 text-xs text-text-secondary">
+              <span className="rounded-md bg-accent px-2 py-1 text-xs text-white">
                 Share
               </span>
             </div>
+            <div className="mb-3 flex gap-1 rounded-md border border-border bg-surface-1 px-2 py-1.5 text-[10px] text-text-secondary">
+              <span className="font-semibold text-text-primary">B</span>
+              <span className="italic">I</span>
+              <span>H1</span>
+            </div>
             <div className="grid gap-4 md:grid-cols-[1fr_180px]">
-              <div className="rounded-md border border-border bg-surface-1 p-4 font-serif text-sm text-text-primary">
-                Your document content appears here with Source Serif 4 typography.
+              <div className="rounded-md border border-border bg-surface-1 p-4 font-serif text-sm leading-relaxed text-text-primary">
+                Collaborate in real time with rich text editing — headings,
+                lists, and live presence.
               </div>
-              <div className="rounded-md border border-border bg-surface-1 p-3 text-xs text-text-secondary">
-                <p className="font-medium text-text-primary">Version history</p>
-                <p className="mt-2">● Added pricing section</p>
-                <p className="mt-1">● Initial draft</p>
+              <div className="space-y-2 rounded-md border border-border bg-surface-1 p-3 text-xs text-text-secondary">
+                <p className="font-medium text-text-primary">Save Version</p>
+                <p className="flex items-center gap-1 text-accent">
+                  <Sparkles className="h-3 w-3" aria-hidden />
+                  Summarize
+                </p>
+                <p className="mt-1 font-medium text-text-primary">History</p>
+                <p className="mt-1 text-text-primary">Added pricing section</p>
+                <p>Fixed intro typos</p>
+                <p>Initial draft</p>
               </div>
             </div>
           </div>
@@ -100,13 +136,17 @@ export function LandingContent({ showNav = true }: LandingContentProps) {
       </section>
 
       <section className="border-t border-border bg-surface-1">
-        <div className="mx-auto grid max-w-5xl gap-6 px-6 py-12 md:grid-cols-3">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-6 py-12 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
             <div
               key={feature.title}
               className="rounded-[10px] border border-border bg-bg p-6 text-left"
             >
-              <p className="text-2xl">{feature.icon}</p>
+              {feature.icon ? (
+                <p className="text-2xl">{feature.icon}</p>
+              ) : feature.Icon ? (
+                <feature.Icon className="h-7 w-7 text-accent" aria-hidden />
+              ) : null}
               <h2 className="mt-3 text-sm font-semibold text-text-primary">
                 {feature.title}
               </h2>
