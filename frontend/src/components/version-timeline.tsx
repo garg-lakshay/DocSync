@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,7 @@ type VersionTimelineProps = {
   restoringId: string | null;
   onSave: () => void;
   onRestore: (versionId: string) => void;
+  summarizeSlot?: ReactNode;
 };
 
 export function VersionTimeline({
@@ -37,6 +38,7 @@ export function VersionTimeline({
   restoringId,
   onSave,
   onRestore,
+  summarizeSlot,
 }: VersionTimelineProps) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
@@ -48,13 +50,15 @@ export function VersionTimeline({
       {canEdit && (
         <Button
           variant="outline"
-          className="mb-6 w-full border-accent text-accent hover:bg-accent-subtle"
+          className="mb-3 w-full border-accent text-accent hover:bg-accent-subtle"
           onClick={onSave}
           disabled={saving}
         >
           {saving ? "Saving…" : "Save Version"}
         </Button>
       )}
+
+      {summarizeSlot && <div className="mb-6">{summarizeSlot}</div>}
 
       <h2 className="text-sm font-semibold text-text-primary">Version history</h2>
 

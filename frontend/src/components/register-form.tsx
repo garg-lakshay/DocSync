@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 
 export function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,37 +38,54 @@ export function RegisterForm() {
       return;
     }
 
-    const response = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          inviteToken: inviteToken ?? undefined,
+        }),
+      });
 
-    if (!response.ok) {
-      const data = (await response.json()) as { error?: string };
-      setError(data.error ?? "Registration failed");
+      if (!response.ok) {
+        const data = (await response.json()) as { error?: string };
+        setError(data.error ?? "Registration failed");
+        return;
+      }
+
+      const data = (await response.json()) as { redirectTo?: string };
+
+      const signInResult = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (!signInResult?.ok) {
+        setError("Account created but sign-in failed");
+        return;
+      }
+
+      router.push(data.redirectTo ?? "/documents");
+      router.refresh();
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const signInResult = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    if (signInResult?.error) {
-      setError("Account created but sign-in failed");
-      setLoading(false);
-      return;
-    }
-
-    router.push("/documents");
-    router.refresh();
   }
 
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
+      {inviteToken && (
+        <div className="rounded-md border border-accent/30 bg-accent-subtle px-3 py-3 text-sm text-text-primary">
+          <p className="font-medium">You&apos;ve been invited to a document</p>
+          <p className="mt-1 text-text-secondary">
+            Create an account below to join and start collaborating.
+          </p>
+        </div>
+      )}
       <div>
         <label htmlFor="name" className="mb-1 block text-sm font-medium text-text-primary">
           Name

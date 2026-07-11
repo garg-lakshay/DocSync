@@ -9,6 +9,7 @@ import {
   isOversizedPayload,
   shouldRejectViewerUpdate,
 } from "./ws-utils.js";
+import { checkRateLimit } from "./rateLimiter.js";
 
 const prisma = new PrismaClient();
 
@@ -19,7 +20,7 @@ const MAX_MESSAGES_PER_SECOND = Number(process.env.MAX_MESSAGES_PER_SECOND ?? 50
 type ConnectionMeta = {
   userId: string;
   role: Role;
-  messageTimestamps: number[];
+  documentId: string;
   rejectedViewerUpdates: number;
 };
 
@@ -62,14 +63,8 @@ async function getDocumentRole(
   return access?.role ?? null;
 }
 
-function isRateLimited(meta: ConnectionMeta): boolean {
-  const now = Date.now();
-  meta.messageTimestamps = meta.messageTimestamps.filter((t) => now - t < 1000);
-  if (meta.messageTimestamps.length >= MAX_MESSAGES_PER_SECOND) {
-    return true;
-  }
-  meta.messageTimestamps.push(now);
-  return false;
+function isRateLimited(meta: ConnectionMeta): Promise<boolean> {
+  return checkRateLimit(meta.userId, meta.documentId);
 }
 
 const server = http.createServer((_req, res) => {
@@ -110,14 +105,14 @@ server.on("upgrade", async (request, socket, head) => {
       const meta: ConnectionMeta = {
         userId,
         role,
-        messageTimestamps: [],
+        documentId,
         rejectedViewerUpdates: 0,
       };
       connectionMeta.set(ws, meta);
 
       patchViewerMessageFilter(ws, role);
 
-      ws.on("message", (data, isBinary) => {
+      ws.on("message", async (data, isBinary) => {
         const current = connectionMeta.get(ws);
         if (!current) return;
 
@@ -126,7 +121,7 @@ server.on("upgrade", async (request, socket, head) => {
           return;
         }
 
-        if (isRateLimited(current)) {
+        if (await isRateLimited(current)) {
           ws.close(1008, "Rate limit exceeded");
           return;
         }

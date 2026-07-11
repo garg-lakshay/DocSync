@@ -15,7 +15,8 @@ import { PresenceAvatars } from "@/components/presence-avatars";
 import { ShareModal } from "@/components/share-modal";
 import { EditorToolbar } from "@/components/editor-toolbar";
 import { VersionTimeline } from "@/components/version-timeline";
-import { encodeSnapshot, restoreFromSnapshot } from "@/lib/ydoc";
+import { SummarizeDialog } from "@/components/summarize-dialog";
+import { encodeSnapshot, restoreFromSnapshot, isYdocEmpty, applyYdocState } from "@/lib/ydoc";
 import { cacheDocumentMeta } from "@/lib/document-cache";
 import type { PresenceUser } from "@/lib/presence";
 import { localAwarenessUser, parseAwarenessUsers } from "@/lib/yjs/awareness";
@@ -46,6 +47,28 @@ type DocumentEditorProps = {
   userName: string;
 };
 
+function waitForProviderSync(
+  provider: WebsocketProvider,
+  timeoutMs: number
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (provider.synced) {
+      resolve(true);
+      return;
+    }
+
+    const timer = setTimeout(() => resolve(false), timeoutMs);
+    const onSync = (synced: boolean) => {
+      if (synced) {
+        clearTimeout(timer);
+        provider.off("sync", onSync);
+        resolve(true);
+      }
+    };
+    provider.on("sync", onSync);
+  });
+}
+
 export function DocumentEditor({
   documentId,
   title,
@@ -55,6 +78,7 @@ export function DocumentEditor({
 }: DocumentEditorProps) {
   const ydocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
+  const hydratedRef = useRef(false);
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [presenceUsers, setPresenceUsers] = useState<PresenceUser[]>([]);
   const [versions, setVersions] = useState<VersionRow[]>([]);
@@ -147,6 +171,51 @@ export function DocumentEditor({
       provider.awareness.on("change", updatePresence);
       updatePresence();
 
+      if (!hydratedRef.current) {
+        hydratedRef.current = true;
+        void (async () => {
+          await persistence.whenSynced;
+          await waitForProviderSync(provider, 8_000);
+          if (!isYdocEmpty(ydoc)) return;
+
+          try {
+            const stateRes = await fetch(`/api/documents/${documentId}/state`);
+            if (stateRes.ok) {
+              const { ydocState } = (await stateRes.json()) as {
+                ydocState: string | null;
+              };
+              if (ydocState) {
+                applyYdocState(ydoc, ydocState);
+                if (!isYdocEmpty(ydoc)) {
+                  toast.info("Restored your last saved content");
+                  return;
+                }
+              }
+            }
+
+            const versionsRes = await fetch(
+              `/api/documents/${documentId}/versions`
+            );
+            if (!versionsRes.ok) return;
+
+            const versionList = (await versionsRes.json()) as VersionRow[];
+            setVersions(versionList);
+            if (versionList.length === 0) return;
+
+            const latestRes = await fetch(
+              `/api/documents/${documentId}/versions/${versionList[0].id}`
+            );
+            if (!latestRes.ok) return;
+
+            const data = (await latestRes.json()) as { ydocSnapshot: string };
+            restoreFromSnapshot(ydoc, data.ydocSnapshot);
+            toast.info("Restored from latest saved version");
+          } catch {
+            // Hydration is best-effort; version history still allows manual restore.
+          }
+        })();
+      }
+
       return () => {
         provider.awareness.off("change", updatePresence);
         provider.off("status", handleStatus);
@@ -175,6 +244,30 @@ export function DocumentEditor({
       persistence.destroy();
     };
   }, [documentId, userId, userName, ydoc]);
+
+  useEffect(() => {
+    if (!canEdit) return;
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const scheduleCheckpoint = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const snapshot = encodeSnapshot(ydoc);
+        void fetch(`/api/documents/${documentId}/state`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ydocState: snapshot }),
+        });
+      }, 10_000);
+    };
+
+    ydoc.on("update", scheduleCheckpoint);
+    return () => {
+      ydoc.off("update", scheduleCheckpoint);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [canEdit, documentId, ydoc]);
 
   useEffect(() => {
     if (!navigator.onLine) return;
@@ -249,7 +342,11 @@ export function DocumentEditor({
         <div className="flex shrink-0 items-center gap-2">
           <ConnectionStatusPill status={status} />
           <PresenceAvatars users={presenceUsers} className="mr-2" />
-          <ShareModal documentId={documentId} canManage={canShare} />
+          <ShareModal
+            documentId={documentId}
+            documentTitle={title}
+            canManage={canShare}
+          />
         </div>
       </div>
 
@@ -275,6 +372,13 @@ export function DocumentEditor({
           restoringId={restoringId}
           onSave={saveVersion}
           onRestore={restoreVersion}
+          summarizeSlot={
+            <SummarizeDialog
+              documentId={documentId}
+              getPlainText={() => editor?.getText() ?? ""}
+              className="w-full"
+            />
+          }
         />
       </div>
     </div>

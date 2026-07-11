@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { verifyInviteToken } from "@/lib/invite-token";
 import { registerSchema } from "@/lib/validations";
 
 export async function POST(request: Request) {
@@ -32,5 +33,21 @@ export async function POST(request: Request) {
     select: { id: true, email: true, name: true },
   });
 
-  return NextResponse.json(user, { status: 201 });
+  let redirectTo = "/documents";
+
+  if (parsed.data.inviteToken) {
+    const invite = await verifyInviteToken(parsed.data.inviteToken);
+    if (invite) {
+      await prisma.documentAccess.create({
+        data: {
+          documentId: invite.documentId,
+          userId: user.id,
+          role: invite.role,
+        },
+      });
+      redirectTo = `/documents/${invite.documentId}`;
+    }
+  }
+
+  return NextResponse.json({ ...user, redirectTo }, { status: 201 });
 }

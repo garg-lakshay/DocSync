@@ -2,6 +2,23 @@ import * as Y from "yjs";
 
 const PROSEMIRROR_FIELD = "default";
 
+export function isYdocEmpty(doc: Y.Doc): boolean {
+  const fragment = doc.getXmlFragment(PROSEMIRROR_FIELD);
+  if (fragment.length === 0) return true;
+
+  let hasContent = false;
+  fragment.forEach((item) => {
+    if (item instanceof Y.XmlText && item.toString().trim().length > 0) {
+      hasContent = true;
+    }
+  });
+  return !hasContent;
+}
+
+export function applyYdocState(liveDoc: Y.Doc, stateBase64: string) {
+  Y.applyUpdate(liveDoc, base64ToUint8(stateBase64));
+}
+
 export function uint8ToBase64(bytes: Uint8Array): string {
   let binary = "";
   const chunkSize = 0x8000;

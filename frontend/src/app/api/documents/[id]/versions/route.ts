@@ -68,16 +68,25 @@ export async function POST(request: Request, context: RouteContext) {
     label = plainText.split(/\s+/).slice(0, 6).join(" ");
   }
 
-  const version = await prisma.documentVersion.create({
-    data: {
-      documentId: id,
-      createdById: session.user.id,
-      label,
-      ydocSnapshot: snapshot,
-    },
-    include: {
-      createdBy: { select: { id: true, name: true, email: true } },
-    },
+  const version = await prisma.$transaction(async (tx) => {
+    const created = await tx.documentVersion.create({
+      data: {
+        documentId: id,
+        createdById: session.user.id,
+        label,
+        ydocSnapshot: snapshot,
+      },
+      include: {
+        createdBy: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    await tx.document.update({
+      where: { id },
+      data: { ydocState: snapshot },
+    });
+
+    return created;
   });
 
   return NextResponse.json(version, { status: 201 });
