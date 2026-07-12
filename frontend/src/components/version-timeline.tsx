@@ -105,8 +105,9 @@ export function VersionTimeline({
           <AlertDialogHeader>
             <AlertDialogTitle>Restore this version?</AlertDialogTitle>
             <AlertDialogDescription>
-              Your current changes remain in history. Restoring applies this snapshot
-              as a regular edit that syncs to all collaborators.
+              Restoring will replace the current content — save a version first if you
+              want to come back to it. This snapshot is applied as a regular edit that
+              syncs to all collaborators.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
