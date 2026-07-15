@@ -99,7 +99,10 @@ export function DocumentEditor({
   const editor = useEditor(
     {
       extensions: [
-        StarterKit,
+        StarterKit.configure({
+          // Collaboration provides its own history; undo-redo conflicts with it
+          undoRedo: false,
+        }),
         Collaboration.configure({ document: ydoc }),
       ],
       editable: canEdit,
